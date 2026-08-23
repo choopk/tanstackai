@@ -1,0 +1,6 @@
+allowBuilds:
+  '@google/genai': false
+  '@openrouter/sdk': false
+  esbuild: true
+  lightningcss: true
+  protobufjs: false
