@@ -28,7 +28,7 @@ Before editing files for a substantial task:
 |---|---|
 | TanStack Start | Whole app (`src/routes/__root.tsx`, server routes in `src/routes/demo/api.*`) |
 | TanStack Router | File-based routes; typed params + validated search demo at `/demo/router/$snippetId` (`src/routes/demo/router/$snippetId.tsx`) |
-| TanStack AI | Chat via `chat()` + `toServerSentEventsResponse()` server-side, `useChat` client-side; OpenRouter adapter wired in `src/routes/demo/api.ai.chat.ts`; guitar tool-calling demo (`demo-guitar-tools.ts`) |
+| TanStack AI | Chat via `chat()` + `toServerSentEventsResponse()` server-side, `useChat` client-side; OpenRouter adapter wired in `src/routes/demo/api.ai.chat.ts`; guitar tool-calling demo (`demo-guitar-tools.ts`); image gen via `openRouterImage('google/gemini-2.5-flash-image')` in `api.ai.image.ts` |
 | TanStack Store | `src/lib/demo-store.ts` + store devtools panel + `/demo/store` route |
 | TanStack Intent | Skill mappings in the block above; run `load <pkg>#<skill>` before library-specific edits |
 | TanStack CLI | Scaffold command above; also `pnpm generate-routes` after adding routes |
@@ -43,6 +43,8 @@ Before editing files for a substantial task:
 
 - Added `@tanstack/ai-openrouter` and made it the preferred provider; capped `modelOptions.maxCompletionTokens: 1024` because the default 16384 exceeds free-tier credit on OpenRouter (caused RUN_ERROR 402).
 - Primary model is OpenRouter's Free Models Router (`openrouter/free`, https://openrouter.ai/openrouter/free): $0 inference, 200k context, auto-selects free variants supporting needed features (tool calling, structured outputs). Zero-balance accounts are limited to ~50 requests/day and 20 req/min — expect RUN_ERROR if exceeded.
+- Image generation: `openrouter/free` is text-only (no $0 image models exist on OpenRouter), so `/demo/api/ai/image` uses the cheapest paid image model `google/gemini-2.5-flash-image` via OPENROUTER_API_KEY, falling back to OpenAI `gpt-image-1`. Requires a small positive credit balance on OpenRouter (~1290 output tokens ≈ $0.04 per 1024x1024 image).
+- The `@tanstack/ai-openrouter` image adapter does not expose `max_tokens`, so OpenRouter defaults to ~29k requested tokens and rejects requests from low-balance accounts (402). `api.ai.image.ts` therefore calls OpenRouter's chat-completions endpoint directly (one image per request, `max_tokens: 4096`) instead of using `openRouterImage`. Revisit if the adapter adds token capping.
 - Kept the generated project structure untouched except for additions (`src/routes/demo/router/$snippetId.tsx`, Header "Router Params" link) and the provider wiring.
 - Zod v4 is installed: use plain `.catch()` in `validateSearch` schemas (no `@tanstack/zod-adapter` / `fallback()` needed).
 
@@ -56,6 +58,7 @@ Before editing files for a substantial task:
 
 - `pnpm build` ✓ · dev server boots on :3000 ✓ · home + router-demo routes return 200 ✓
 - POST `/demo/api/ai/chat` streams RUN_STARTED → TEXT_MESSAGE_* → RUN_FINISHED via OpenRouter (`openrouter/free`) ✓
+- POST `/demo/api/ai/image` returns base64 PNGs via OpenRouter (`google/gemini-2.5-flash-image`) ✓
 
 ## Next steps / deployment notes
 
