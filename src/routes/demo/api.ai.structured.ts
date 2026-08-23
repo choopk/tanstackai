@@ -9,7 +9,7 @@ const FREE_MODEL = 'openrouter/free'
 function resolveAdapter() {
   if (process.env.OPENROUTER_API_KEY) {
     return {
-      adapter: () => openRouterText(FREE_MODEL),
+      adapter: () => openRouterText(FREE_MODEL as any),
       provider: 'openrouter',
       model: FREE_MODEL,
     }

@@ -6,17 +6,20 @@ import {
 import type { InferChatMessages } from '@tanstack/ai-react'
 import { clientTools } from '@tanstack/ai-client'
 
-import { recommendGuitarToolDef } from '#/lib/demo-guitar-tools'
+import { showOfferToolDef } from '#/lib/studio-tools'
 
-const recommendGuitarToolClient = recommendGuitarToolDef.client(({ id }) => ({
+// Client-side tool implementation: runs in the browser when the model
+// emits a showOffer call. We normalize the id and confirm display.
+const showOfferToolClient = showOfferToolDef.client(({ id }) => ({
   id: +id,
+  displayed: true,
 }))
 
 const chatOptions = createChatClientOptions({
   connection: fetchServerSentEvents('/demo/api/ai/chat'),
-  tools: clientTools(recommendGuitarToolClient),
+  tools: clientTools(showOfferToolClient),
 })
 
 export type ChatMessages = InferChatMessages<typeof chatOptions>
 
-export const useGuitarRecommendationChat = () => useChat(chatOptions)
+export const useStudioChat = () => useChat(chatOptions)

@@ -6,23 +6,23 @@ import { geminiText } from '@tanstack/ai-gemini'
 import { ollamaText } from '@tanstack/ai-ollama'
 import { openRouterText } from '@tanstack/ai-openrouter'
 
-import { getGuitars, recommendGuitarToolDef } from '#/lib/demo-guitar-tools'
+import { getServices, showOfferToolDef } from '#/lib/studio-tools'
 
-const SYSTEM_PROMPT = `You are a helpful assistant for a store that sells guitars.
+const SYSTEM_PROMPT = `You are an AI solutions consultant who helps small business owners find the right AI automation for their business.
 
 CRITICAL INSTRUCTIONS - YOU MUST FOLLOW THIS EXACT WORKFLOW:
 
-When a user asks for a guitar recommendation:
-1. FIRST: Use the getGuitars tool (no parameters needed)
-2. SECOND: Use the recommendGuitar tool with the ID of the guitar you want to recommend
-3. NEVER write a recommendation directly - ALWAYS use the recommendGuitar tool
+When discussing services or recommending an offering:
+1. FIRST: Use the getServices tool (no parameters needed) to see available packages
+2. SECOND: Use the showOffer tool with the package ID and a one-sentence pitch tailored to the client's situation
+3. NEVER write out package details yourself - ALWAYS use the showOffer tool
 
 IMPORTANT:
-- The recommendGuitar tool will display the guitar in a special, appealing format
-- You MUST use recommendGuitar for ANY guitar recommendation
-- ONLY recommend guitars from our inventory (use getGuitars first)
-- The recommendGuitar tool has a buy button - this is how customers purchase
-- Do NOT describe the guitar yourself - let the recommendGuitar tool do it
+- The showOffer tool displays the package as an interactive card with a booking button
+- You MUST use showOffer for ANY service recommendation
+- ONLY offer packages that exist in the catalog (call getServices first)
+- Ask about the client's business, team size, and biggest time drain before recommending if it is not clear
+- Keep your text responses brief - let the showOffer card do the heavy lifting
 `
 
 export const Route = createFileRoute('/demo/api/ai/chat')({
@@ -80,8 +80,8 @@ export const Route = createFileRoute('/demo/api/ai/chat')({
                 ? { maxCompletionTokens: 1024 }
                 : undefined,
             tools: [
-              getGuitars, // Server tool
-              recommendGuitarToolDef, // No server execute - client will handle
+              getServices, // Server tool - executes on the server
+              showOfferToolDef, // Client tool - definition only, browser executes it
             ],
             systemPrompts: [SYSTEM_PROMPT],
             agentLoopStrategy: maxIterations(5),

@@ -5,10 +5,10 @@ import { Store } from '@tanstack/store'
 import { Send, X, ChevronRight, BotIcon } from 'lucide-react'
 import { Streamdown } from 'streamdown'
 
-import { useGuitarRecommendationChat } from '#/lib/demo-ai-hook'
+import { useStudioChat } from '#/lib/demo-ai-hook'
 import type { ChatMessages } from '#/lib/demo-ai-hook'
 
-import GuitarRecommendation from './demo-GuitarRecommendation'
+import OfferCard from './demo-OfferCard'
 
 export const showAIAssistant = new Store(false)
 
@@ -60,12 +60,12 @@ function Messages({ messages }: { messages: ChatMessages }) {
             }
             if (
               part.type === 'tool-call' &&
-              part.name === 'recommendGuitar' &&
+              part.name === 'showOffer' &&
               part.output
             ) {
               return (
                 <div key={part.id} className="max-w-[80%] mx-auto">
-                  <GuitarRecommendation id={String(part.output?.id)} />
+                  <OfferCard id={String(part.output?.id)} />
                 </div>
               )
             }
@@ -78,7 +78,7 @@ function Messages({ messages }: { messages: ChatMessages }) {
 
 export default function AIAssistant() {
   const isOpen = useStore(showAIAssistant, (state) => state)
-  const { messages, sendMessage } = useGuitarRecommendationChat()
+  const { messages, sendMessage } = useStudioChat()
   const [input, setInput] = useState('')
 
   return (

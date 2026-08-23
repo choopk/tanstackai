@@ -57,7 +57,7 @@ export function useAudioRecorder() {
           )
           formData.append('model', 'whisper-1')
 
-          const response = await fetch('/demo/api/transcription', {
+          const response = await fetch('/demo/api/ai/transcription', {
             method: 'POST',
             body: formData,
           })

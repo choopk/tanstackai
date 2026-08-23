@@ -11,12 +11,12 @@ import {
 } from 'lucide-react'
 import { Streamdown } from 'streamdown'
 
-import { useGuitarRecommendationChat } from '#/lib/demo-ai-hook'
+import { useStudioChat } from '#/lib/demo-ai-hook'
 import type { ChatMessages } from '#/lib/demo-ai-hook'
 import { useAudioRecorder } from '#/hooks/demo-useAudioRecorder'
 import { useTTS } from '#/hooks/demo-useTTS'
 
-import GuitarRecommendation from '#/components/demo-GuitarRecommendation'
+import OfferCard from '#/components/demo-OfferCard'
 
 import './ai-chat.css'
 
@@ -24,10 +24,11 @@ function InitialLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex-1 flex items-center justify-center px-4">
       <div className="text-center max-w-3xl mx-auto w-full">
-        <h1 className="demo-title mb-4">TanStack Chat</h1>
+        <h1 className="demo-title mb-4">AI Solutions Advisor</h1>
         <p className="demo-muted mb-6 mx-auto max-w-2xl text-lg">
-          You can ask me about anything, I might or might not have a good
-          answer, but you can still ask.
+          Tell me about your business and I'll recommend an AI automation that
+          saves you time. Try: "I run a 5-person dental clinic buried in
+          paperwork."
         </p>
         {children}
       </div>
@@ -120,15 +121,15 @@ function Messages({
                         </div>
                       )
                     }
-                    // Guitar recommendation card
+                    // Service offer card rendered by the client-side tool
                     if (
                       part.type === 'tool-call' &&
-                      part.name === 'recommendGuitar' &&
+                      part.name === 'showOffer' &&
                       part.output
                     ) {
                       return (
                         <div key={part.id} className="max-w-[80%] mx-auto">
-                          <GuitarRecommendation id={String(part.output?.id)} />
+                          <OfferCard id={String(part.output?.id)} />
                         </div>
                       )
                     }
@@ -169,8 +170,7 @@ function ChatPage() {
     useAudioRecorder()
   const { playingId, speak, stop: stopTTS } = useTTS()
 
-  const { messages, sendMessage, isLoading, stop } =
-    useGuitarRecommendationChat()
+  const { messages, sendMessage, isLoading, stop } = useStudioChat()
 
   const handleMicClick = async () => {
     if (isRecording) {

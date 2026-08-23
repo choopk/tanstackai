@@ -11,14 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as StudioRouteImport } from './routes/studio'
 import { Route as DemoAiChatRouteImport } from './routes/demo/ai-chat'
 import { Route as DemoAiImageRouteImport } from './routes/demo/ai-image'
 import { Route as DemoAiStructuredRouteImport } from './routes/demo/ai-structured'
 import { Route as DemoStoreRouteImport } from './routes/demo/store'
-import { Route as DemoGuitarsIndexRouteImport } from './routes/demo/guitars/index'
-import { Route as DemoGuitarsGuitarIdRouteImport } from './routes/demo/guitars/$guitarId'
 import { Route as DemoRouterSnippetIdRouteImport } from './routes/demo/router/$snippetId'
 import { Route as DemoApiAiChatRouteImport } from './routes/demo/api.ai.chat'
+import { Route as DemoApiAiCopykitRouteImport } from './routes/demo/api.ai.copykit'
 import { Route as DemoApiAiImageRouteImport } from './routes/demo/api.ai.image'
 import { Route as DemoApiAiStructuredRouteImport } from './routes/demo/api.ai.structured'
 import { Route as DemoApiAiTranscriptionRouteImport } from './routes/demo/api.ai.transcription'
@@ -32,6 +32,11 @@ const IndexRoute = IndexRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudioRoute = StudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoAiChatRoute = DemoAiChatRouteImport.update({
@@ -54,16 +59,6 @@ const DemoStoreRoute = DemoStoreRouteImport.update({
   path: '/demo/store',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DemoGuitarsIndexRoute = DemoGuitarsIndexRouteImport.update({
-  id: '/demo/guitars/',
-  path: '/demo/guitars/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemoGuitarsGuitarIdRoute = DemoGuitarsGuitarIdRouteImport.update({
-  id: '/demo/guitars/$guitarId',
-  path: '/demo/guitars/$guitarId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DemoRouterSnippetIdRoute = DemoRouterSnippetIdRouteImport.update({
   id: '/demo/router/$snippetId',
   path: '/demo/router/$snippetId',
@@ -72,6 +67,11 @@ const DemoRouterSnippetIdRoute = DemoRouterSnippetIdRouteImport.update({
 const DemoApiAiChatRoute = DemoApiAiChatRouteImport.update({
   id: '/demo/api/ai/chat',
   path: '/demo/api/ai/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoApiAiCopykitRoute = DemoApiAiCopykitRouteImport.update({
+  id: '/demo/api/ai/copykit',
+  path: '/demo/api/ai/copykit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoApiAiImageRoute = DemoApiAiImageRouteImport.update({
@@ -98,14 +98,14 @@ const DemoApiAiTtsRoute = DemoApiAiTtsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/studio': typeof StudioRoute
   '/demo/ai-chat': typeof DemoAiChatRoute
   '/demo/ai-image': typeof DemoAiImageRoute
   '/demo/ai-structured': typeof DemoAiStructuredRoute
   '/demo/store': typeof DemoStoreRoute
-  '/demo/guitars/$guitarId': typeof DemoGuitarsGuitarIdRoute
   '/demo/router/$snippetId': typeof DemoRouterSnippetIdRoute
-  '/demo/guitars/': typeof DemoGuitarsIndexRoute
   '/demo/api/ai/chat': typeof DemoApiAiChatRoute
+  '/demo/api/ai/copykit': typeof DemoApiAiCopykitRoute
   '/demo/api/ai/image': typeof DemoApiAiImageRoute
   '/demo/api/ai/structured': typeof DemoApiAiStructuredRoute
   '/demo/api/ai/transcription': typeof DemoApiAiTranscriptionRoute
@@ -114,14 +114,14 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/studio': typeof StudioRoute
   '/demo/ai-chat': typeof DemoAiChatRoute
   '/demo/ai-image': typeof DemoAiImageRoute
   '/demo/ai-structured': typeof DemoAiStructuredRoute
   '/demo/store': typeof DemoStoreRoute
-  '/demo/guitars/$guitarId': typeof DemoGuitarsGuitarIdRoute
   '/demo/router/$snippetId': typeof DemoRouterSnippetIdRoute
-  '/demo/guitars': typeof DemoGuitarsIndexRoute
   '/demo/api/ai/chat': typeof DemoApiAiChatRoute
+  '/demo/api/ai/copykit': typeof DemoApiAiCopykitRoute
   '/demo/api/ai/image': typeof DemoApiAiImageRoute
   '/demo/api/ai/structured': typeof DemoApiAiStructuredRoute
   '/demo/api/ai/transcription': typeof DemoApiAiTranscriptionRoute
@@ -131,14 +131,14 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/studio': typeof StudioRoute
   '/demo/ai-chat': typeof DemoAiChatRoute
   '/demo/ai-image': typeof DemoAiImageRoute
   '/demo/ai-structured': typeof DemoAiStructuredRoute
   '/demo/store': typeof DemoStoreRoute
-  '/demo/guitars/$guitarId': typeof DemoGuitarsGuitarIdRoute
   '/demo/router/$snippetId': typeof DemoRouterSnippetIdRoute
-  '/demo/guitars/': typeof DemoGuitarsIndexRoute
   '/demo/api/ai/chat': typeof DemoApiAiChatRoute
+  '/demo/api/ai/copykit': typeof DemoApiAiCopykitRoute
   '/demo/api/ai/image': typeof DemoApiAiImageRoute
   '/demo/api/ai/structured': typeof DemoApiAiStructuredRoute
   '/demo/api/ai/transcription': typeof DemoApiAiTranscriptionRoute
@@ -149,14 +149,14 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/studio'
     | '/demo/ai-chat'
     | '/demo/ai-image'
     | '/demo/ai-structured'
     | '/demo/store'
-    | '/demo/guitars/$guitarId'
     | '/demo/router/$snippetId'
-    | '/demo/guitars/'
     | '/demo/api/ai/chat'
+    | '/demo/api/ai/copykit'
     | '/demo/api/ai/image'
     | '/demo/api/ai/structured'
     | '/demo/api/ai/transcription'
@@ -165,14 +165,14 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/studio'
     | '/demo/ai-chat'
     | '/demo/ai-image'
     | '/demo/ai-structured'
     | '/demo/store'
-    | '/demo/guitars/$guitarId'
     | '/demo/router/$snippetId'
-    | '/demo/guitars'
     | '/demo/api/ai/chat'
+    | '/demo/api/ai/copykit'
     | '/demo/api/ai/image'
     | '/demo/api/ai/structured'
     | '/demo/api/ai/transcription'
@@ -181,14 +181,14 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/studio'
     | '/demo/ai-chat'
     | '/demo/ai-image'
     | '/demo/ai-structured'
     | '/demo/store'
-    | '/demo/guitars/$guitarId'
     | '/demo/router/$snippetId'
-    | '/demo/guitars/'
     | '/demo/api/ai/chat'
+    | '/demo/api/ai/copykit'
     | '/demo/api/ai/image'
     | '/demo/api/ai/structured'
     | '/demo/api/ai/transcription'
@@ -198,14 +198,14 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  StudioRoute: typeof StudioRoute
   DemoAiChatRoute: typeof DemoAiChatRoute
   DemoAiImageRoute: typeof DemoAiImageRoute
   DemoAiStructuredRoute: typeof DemoAiStructuredRoute
   DemoStoreRoute: typeof DemoStoreRoute
-  DemoGuitarsGuitarIdRoute: typeof DemoGuitarsGuitarIdRoute
   DemoRouterSnippetIdRoute: typeof DemoRouterSnippetIdRoute
-  DemoGuitarsIndexRoute: typeof DemoGuitarsIndexRoute
   DemoApiAiChatRoute: typeof DemoApiAiChatRoute
+  DemoApiAiCopykitRoute: typeof DemoApiAiCopykitRoute
   DemoApiAiImageRoute: typeof DemoApiAiImageRoute
   DemoApiAiStructuredRoute: typeof DemoApiAiStructuredRoute
   DemoApiAiTranscriptionRoute: typeof DemoApiAiTranscriptionRoute
@@ -226,6 +226,13 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/studio': {
+      id: '/studio'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo/ai-chat': {
@@ -256,20 +263,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoStoreRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/demo/guitars/': {
-      id: '/demo/guitars/'
-      path: '/demo/guitars'
-      fullPath: '/demo/guitars/'
-      preLoaderRoute: typeof DemoGuitarsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/demo/guitars/$guitarId': {
-      id: '/demo/guitars/$guitarId'
-      path: '/demo/guitars/$guitarId'
-      fullPath: '/demo/guitars/$guitarId'
-      preLoaderRoute: typeof DemoGuitarsGuitarIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/demo/router/$snippetId': {
       id: '/demo/router/$snippetId'
       path: '/demo/router/$snippetId'
@@ -282,6 +275,13 @@ declare module '@tanstack/react-router' {
       path: '/demo/api/ai/chat'
       fullPath: '/demo/api/ai/chat'
       preLoaderRoute: typeof DemoApiAiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo/api/ai/copykit': {
+      id: '/demo/api/ai/copykit'
+      path: '/demo/api/ai/copykit'
+      fullPath: '/demo/api/ai/copykit'
+      preLoaderRoute: typeof DemoApiAiCopykitRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo/api/ai/image': {
@@ -318,14 +318,14 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  StudioRoute: StudioRoute,
   DemoAiChatRoute: DemoAiChatRoute,
   DemoAiImageRoute: DemoAiImageRoute,
   DemoAiStructuredRoute: DemoAiStructuredRoute,
   DemoStoreRoute: DemoStoreRoute,
-  DemoGuitarsGuitarIdRoute: DemoGuitarsGuitarIdRoute,
   DemoRouterSnippetIdRoute: DemoRouterSnippetIdRoute,
-  DemoGuitarsIndexRoute: DemoGuitarsIndexRoute,
   DemoApiAiChatRoute: DemoApiAiChatRoute,
+  DemoApiAiCopykitRoute: DemoApiAiCopykitRoute,
   DemoApiAiImageRoute: DemoApiAiImageRoute,
   DemoApiAiStructuredRoute: DemoApiAiStructuredRoute,
   DemoApiAiTranscriptionRoute: DemoApiAiTranscriptionRoute,

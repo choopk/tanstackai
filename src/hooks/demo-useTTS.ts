@@ -17,7 +17,7 @@ export function useTTS() {
     setPlayingId(id)
 
     try {
-      const response = await fetch('/demo/api/tts', {
+      const response = await fetch('/demo/api/ai/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
