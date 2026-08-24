@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
-import { Send, Square } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Send, Square, X, Bug } from 'lucide-react'
 import { Streamdown } from 'streamdown'
 
-import { useStudioChat } from '#/lib/demo-ai-hook'
-import type { ChatMessages } from '#/lib/demo-ai-hook'
+import {
+  createStudioChatOptions,
+  type StudioChatRuntimeOptions,
+} from '#/lib/demo-ai-hook'
+import { useChat } from '@tanstack/ai-react'
 import OfferCard from '#/components/demo-OfferCard'
 
 import HowItWorks from './HowItWorks'
@@ -22,11 +25,11 @@ const FOCUS = {
   data: {
     title: 'Data Agent',
     blurb:
-      'The model calls the getServices SERVER tool to fetch live catalog data mid-conversation. The server executes it and feeds results back into the loop — the browser never sees your data source.',
+      'The model calls the getServices SERVER tool to fetch live catalog data mid-conversation. Try asking for proof of past results too — that triggers getCaseStudies, a LAZY tool whose schema is discovered on demand instead of shipped in every prompt.',
     suggestions: [
       'What services do you offer?',
       'Which package is best for automating invoices?',
-      'Compare your cheapest and most complete offerings',
+      'Show me proof of past results from your clients',
     ],
   },
   actions: {
@@ -51,6 +54,17 @@ const FOCUS = {
   },
 } as const
 
+// Providers selectable at runtime. The server silently falls back to the
+// best configured provider when a key is missing.
+const PROVIDERS = [
+  { id: '', label: 'Auto (best available)' },
+  { id: 'openrouter', label: 'OpenRouter free' },
+  { id: 'anthropic', label: 'Claude Haiku' },
+  { id: 'openai', label: 'GPT-4o' },
+  { id: 'gemini', label: 'Gemini Flash' },
+  { id: 'ollama', label: 'Ollama (local)' },
+]
+
 export default function AgentPanel({
   focus,
 }: {
@@ -58,8 +72,28 @@ export default function AgentPanel({
 }) {
   const { blurb, suggestions } = FOCUS[focus]
   const [input, setInput] = useState('')
-  const { messages, sendMessage, isLoading, stop, interrupts } =
-    useStudioChat()
+  const [provider, setProvider] = useState('')
+  const [debug, setDebug] = useState(false)
+
+  // Runtime adapter switching + debug flag ride to the server via `body`.
+  const runtime = useMemo<StudioChatRuntimeOptions>(
+    () => ({
+      ...(provider ? { provider } : {}),
+      ...(debug ? { debug: true } : {}),
+    }),
+    [provider, debug],
+  )
+  const chatOptions = useMemo(() => createStudioChatOptions(runtime), [runtime])
+
+  const {
+    messages,
+    sendMessage,
+    isLoading,
+    stop,
+    interrupts,
+    queue,
+    cancelQueued,
+  } = useChat(chatOptions)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -69,15 +103,44 @@ export default function AgentPanel({
     }
   }, [messages])
 
-  const send = (text: string) => {
-    if (!text.trim() || isLoading) return
-    sendMessage(text)
+  const send = (text?: string) => {
+    const message = text ?? input
+    if (!message.trim() || isLoading) return
+    sendMessage(message)
     setInput('')
   }
 
   return (
     <div>
       <p className="demo-muted mb-4 max-w-2xl">{blurb}</p>
+
+      {/* Runtime controls: adapter switching + debug logging */}
+      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-2">
+        <label className="flex items-center gap-2 text-xs demo-muted">
+          Provider
+          <select
+            value={provider}
+            onChange={(e) => setProvider(e.target.value)}
+            className="rounded-lg border border-[var(--line)] bg-transparent px-2 py-1 text-xs text-[var(--sea-ink)]"
+          >
+            {PROVIDERS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="ml-auto flex cursor-pointer items-center gap-2 text-xs demo-muted">
+          <input
+            type="checkbox"
+            checked={debug}
+            onChange={(e) => setDebug(e.target.checked)}
+            className="accent-[var(--lagoon-deep)]"
+          />
+          <Bug className="h-3.5 w-3.5" />
+          Debug logging (server console)
+        </label>
+      </div>
 
       {interrupts.length > 0 && (
         <div className="mb-4 space-y-3">
@@ -124,6 +187,26 @@ export default function AgentPanel({
         </div>
       )}
 
+      {/* Queued messages: sent while a stream was in flight */}
+      {queue.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs demo-muted">Queued:</span>
+          {queue.map((q) => (
+            <span
+              key={q.id}
+              className="flex items-center gap-1 rounded-full border border-dashed border-[var(--line)] px-3 py-1 text-xs text-[var(--sea-ink-soft)]"
+            >
+              {typeof q.content === 'string'
+                ? q.content.slice(0, 40)
+                : '[attachment]'}
+              <button onClick={() => cancelQueued(q.id)}>
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="demo-card flex flex-col p-0" style={{ height: '480px' }}>
         <div
           ref={messagesContainerRef}
@@ -134,7 +217,7 @@ export default function AgentPanel({
               <p className="text-sm demo-muted">
                 Try one of these, or ask anything:
               </p>
-              <div className="flex flex-col gap-2 w-full max-w-md">
+              <div className="flex w-full max-w-md flex-col gap-2">
                 {suggestions.map((s) => (
                   <button
                     key={s}
@@ -148,7 +231,7 @@ export default function AgentPanel({
             </div>
           ) : (
             <div className="px-4">
-              {(messages as ChatMessages).map((message) => (
+              {messages.map((message) => (
                 <div
                   key={message.id}
                   className={`py-3 ${
@@ -167,13 +250,26 @@ export default function AgentPanel({
                     >
                       {message.role === 'assistant' ? 'AI' : 'Y'}
                     </div>
-                    <div className="min-w-0 flex-1 text-sm text-[var(--sea-ink)] [&_div]:max-w-none">
+                    <div className="[&_div]:max-w-none min-w-0 flex-1 text-sm text-[var(--sea-ink)]">
                       {message.parts.map((part, partIndex) => {
+                        if (part.type === 'thinking') {
+                          return (
+                            <details
+                              key={partIndex}
+                              className="mb-2 rounded-lg border border-dashed border-[var(--line)] px-3 py-1.5"
+                            >
+                              <summary className="cursor-pointer list-none text-xs italic demo-muted">
+                                Thinking...
+                              </summary>
+                              <pre className="mt-2 whitespace-pre-wrap text-xs italic demo-muted">
+                                {part.content}
+                              </pre>
+                            </details>
+                          )
+                        }
                         if (part.type === 'text' && part.content) {
                           return (
-                            <Streamdown key={partIndex}>
-                              {part.content}
-                            </Streamdown>
+                            <Streamdown key={partIndex}>{part.content}</Streamdown>
                           )
                         }
                         if (
@@ -211,7 +307,7 @@ export default function AgentPanel({
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            send(input)
+            send()
           }}
           className="border-t border-[var(--line)] p-3"
         >
@@ -219,15 +315,18 @@ export default function AgentPanel({
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Describe your business..."
+              placeholder={
+                isLoading
+                  ? 'Streaming... anything you type now gets queued'
+                  : 'Describe your business...'
+              }
               className="demo-textarea pr-10 text-sm"
               rows={1}
               style={{ minHeight: '36px', maxHeight: '120px' }}
-              disabled={isLoading}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey && input.trim()) {
                   e.preventDefault()
-                  send(input)
+                  send()
                 }
               }}
             />
@@ -258,7 +357,7 @@ export default function AgentPanel({
           focus === 'chat'
             ? 'How this works: streaming chat'
             : focus === 'data'
-              ? 'How this works: server-side tools'
+              ? 'How this works: server-side + lazy tools'
               : focus === 'actions'
                 ? 'How this works: client-side tools'
                 : 'How this works: tool approval (human-in-the-loop)'
@@ -289,8 +388,11 @@ export default function AgentPanel({
               that runs on the server when the model requests it.
             </li>
             <li>
-              The result is validated by <code>outputSchema</code> and fed back so
-              the model can reason over fresh data — no hallucinated catalogs.
+              <strong>Lazy tools:</strong>{' '}
+              <code>getCaseStudies</code> sets <code>lazy: true</code>, so its schema is
+              NOT sent with every prompt. The model sees a synthetic{' '}
+              <code>__lazy__tool__discovery__</code> tool and pulls the schema only
+              when needed — then it stays available for the conversation.
             </li>
             <li>
               Swap the static array for your database and you have a real

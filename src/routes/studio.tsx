@@ -12,6 +12,7 @@ import {
   HardDrive,
   Gauge,
   Globe,
+  Eye,
 } from 'lucide-react'
 
 import CopyKitPanel from '#/components/studio/CopyKitPanel'
@@ -21,6 +22,7 @@ import VoicePanel from '#/components/studio/VoicePanel'
 import MemoryPanel from '#/components/studio/MemoryPanel'
 import UsagePanel from '#/components/studio/UsagePanel'
 import McpPanel from '#/components/studio/McpPanel'
+import MultimodalPanel from '#/components/studio/MultimodalPanel'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -32,6 +34,7 @@ const TABS = [
   { id: 'memory', label: 'Memory' },
   { id: 'usage', label: 'Usage Metering' },
   { id: 'mcp', label: 'MCP Tools' },
+  { id: 'vision', label: 'Vision' },
   { id: 'ads', label: 'Ad Studio' },
   { id: 'voice', label: 'Voice Desk' },
 ] as const
@@ -49,6 +52,7 @@ export const Route = createFileRoute('/studio')({
         'memory',
         'usage',
         'mcp',
+        'vision',
         'ads',
         'voice',
       ])
@@ -130,6 +134,15 @@ const MODULES = [
     description:
       'chat() discovers tools from the public DeepWiki MCP server at run start — zero hand-written integrations.',
     sell: 'Instant "works with your stack" offers',
+  },
+  {
+    tab: 'vision' as const,
+    icon: Eye,
+    feature: 'Multimodal Input',
+    title: 'Vision Chat',
+    description:
+      'Attach images and chat about them with typed ContentPart arrays — menus, flyers, storefronts.',
+    sell: 'Visual audits & document Q&A services',
   },
   {
     tab: 'ads' as const,
@@ -228,6 +241,7 @@ function StudioPage() {
         {tab === 'memory' && <MemoryPanel />}
         {tab === 'usage' && <UsagePanel />}
         {tab === 'mcp' && <McpPanel />}
+        {tab === 'vision' && <MultimodalPanel />}
         {tab === 'ads' && <ImagePanel />}
         {tab === 'voice' && <VoicePanel />}
       </div>

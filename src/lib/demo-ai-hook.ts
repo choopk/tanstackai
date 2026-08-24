@@ -15,16 +15,37 @@ const showOfferToolClient = showOfferToolDef.client(({ id }) => ({
   displayed: true,
 }))
 
-const chatOptions = createChatClientOptions({
-  connection: fetchServerSentEvents('/demo/api/ai/chat'),
-  tools: clientTools(
-    showOfferToolClient,
-    // Bare definition: this tool executes on the server, but registering
-    // the definition here types its approval interrupts for the UI.
-    scheduleIntroCallDef,
-  ),
-})
+export interface StudioChatRuntimeOptions {
+  // Runtime adapter switching: the endpoint falls back to the best
+  // configured provider if the requested one has no API key.
+  provider?: string
+  // Turns on server-side debug logging (request/provider/output/tools...)
+  debug?: boolean
+}
 
-export type ChatMessages = InferChatMessages<typeof chatOptions>
+export function createStudioChatOptions(
+  runtime?: StudioChatRuntimeOptions,
+) {
+  const body: Record<string, unknown> = {}
+  if (runtime?.provider) body.provider = runtime.provider
+  if (runtime?.debug) body.debug = true
 
-export const useStudioChat = () => useChat(chatOptions)
+  return createChatClientOptions({
+    connection: fetchServerSentEvents('/demo/api/ai/chat'),
+    tools: clientTools(
+      showOfferToolClient,
+      // Bare definition: this tool executes on the server, but registering
+      // the definition here types its approval interrupts for the UI.
+      scheduleIntroCallDef,
+    ),
+    ...(Object.keys(body).length > 0 ? { body } : {}),
+  })
+}
+
+type StudioChatOptions = ReturnType<typeof createStudioChatOptions>
+
+export type ChatMessages = InferChatMessages<StudioChatOptions>
+
+// Static-options variant used by the floating assistant.
+const defaultChatOptions = createStudioChatOptions()
+export const useStudioChat = () => useChat(defaultChatOptions)

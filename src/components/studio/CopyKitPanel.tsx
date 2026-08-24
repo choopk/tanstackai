@@ -1,18 +1,21 @@
-import { useState } from 'react'
-import { Loader2, Sparkles, Copy, Check } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import {
+  Loader2,
+  Sparkles,
+  Copy,
+  Check,
+  Zap,
+  FileJson,
+} from 'lucide-react'
+import {
+  createChatClientOptions,
+  fetchServerSentEvents,
+  useChat,
+} from '@tanstack/ai-react'
+
+import { CopyKitSchema, type CopyKit } from '#/lib/studio-schemas'
 
 import HowItWorks from './HowItWorks'
-
-interface CopyKit {
-  businessName: string
-  tagline: string
-  heroHeadline: string
-  heroSubheadline: string
-  socialPosts: Array<{ platform: string; text: string }>
-  emailSubject: string
-  emailBody: string
-  ctaSuggestions: Array<string>
-}
 
 const EXAMPLES = [
   'Family-owned bakery in Austin, known for sourdough, open since 1998',
@@ -37,14 +40,118 @@ function CopyButton({ text }: { text: string }) {
   )
 }
 
+function KitView({ kit }: { kit: CopyKit }) {
+  return (
+    <div className="space-y-4">
+      <div className="demo-card p-5">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-xl font-bold text-[var(--sea-ink)]">
+            {kit.businessName}
+          </h3>
+          <CopyButton text={`${kit.tagline}\n\n${kit.heroHeadline}\n${kit.heroSubheadline}`} />
+        </div>
+        <p className="text-sm font-medium italic text-[var(--lagoon-deep)]">
+          “{kit.tagline}”
+        </p>
+        <hr className="my-4 border-[var(--line)]" />
+        <h4 className="text-lg font-semibold text-[var(--sea-ink)]">
+          {kit.heroHeadline}
+        </h4>
+        <p className="demo-muted mt-1 text-sm">{kit.heroSubheadline}</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {(kit.ctaSuggestions ?? []).map((cta) => (
+            <span
+              key={cta}
+              className="rounded-full bg-[var(--lagoon-deep)] px-4 py-1.5 text-sm font-semibold text-white"
+            >
+              {cta}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        {(kit.socialPosts ?? []).map((post) => (
+          <div key={post.platform} className="demo-card p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--lagoon-deep)]">
+                {post.platform}
+              </span>
+              <CopyButton text={post.text} />
+            </div>
+            <p className="text-sm text-[var(--sea-ink)]">{post.text}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="demo-card p-5">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--lagoon-deep)]">
+            Email campaign
+          </span>
+          <CopyButton text={`Subject: ${kit.emailSubject}\n\n${kit.emailBody}`} />
+        </div>
+        <p className="font-semibold text-[var(--sea-ink)]">
+          Subject: {kit.emailSubject}
+        </p>
+        <p className="demo-muted mt-2 whitespace-pre-line text-sm">
+          {kit.emailBody}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// Progressive view while JSON deltas stream in via `partial`
+function PartialView({ partial }: { partial: Partial<CopyKit> }) {
+  return (
+    <div className="demo-card mt-6 space-y-3 p-5">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--lagoon-deep)]">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        Streaming fields as they arrive...
+      </div>
+      {partial.businessName && (
+        <h3 className="text-xl font-bold text-[var(--sea-ink)]">
+          {partial.businessName}
+        </h3>
+      )}
+      {partial.tagline && (
+        <p className="text-sm italic text-[var(--lagoon-deep)]">
+          “{partial.tagline}”
+        </p>
+      )}
+      {partial.heroHeadline && (
+        <h4 className="font-semibold text-[var(--sea-ink)]">
+          {partial.heroHeadline}
+        </h4>
+      )}
+      {partial.heroSubheadline && (
+        <p className="demo-muted text-sm">{partial.heroSubheadline}</p>
+      )}
+      {partial.socialPosts && partial.socialPosts.length > 0 && (
+        <p className="text-xs demo-muted">
+          social posts: {partial.socialPosts.length}/3
+        </p>
+      )}
+      {!partial.businessName && (
+        <p className="text-xs demo-muted">Waiting for first field...</p>
+      )}
+    </div>
+  )
+}
+
 export default function CopyKitPanel() {
+  // 'json' = await chat({ outputSchema }) — one validated object
+  // 'streaming' = SSE + useChat({ outputSchema }) with live partial
+  const [mode, setMode] = useState<'json' | 'streaming'>('streaming')
   const [description, setDescription] = useState('')
   const [tone, setTone] = useState('friendly and professional')
   const [kit, setKit] = useState<CopyKit | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const generate = async () => {
+  // ---- One-shot mode ----
+  const generateJson = async () => {
     if (!description.trim() || isLoading) return
     setIsLoading(true)
     setError(null)
@@ -65,6 +172,34 @@ export default function CopyKitPanel() {
     }
   }
 
+  // ---- Streaming mode: partial fills field-by-field, final snaps in ----
+  // outputSchema is a useChat-level option (client-side typing of
+  // partial/final); the server validates against its own copy.
+  const streamOptions = useMemo(
+    () =>
+      createChatClientOptions({
+        connection: fetchServerSentEvents('/demo/api/ai/copykit?mode=streaming'),
+      }),
+    [],
+  )
+  const { sendMessage: sendStream, partial, final } = useChat({
+    ...streamOptions,
+    outputSchema: CopyKitSchema,
+  })
+
+  const generateStreaming = () => {
+    if (!description.trim()) return
+    setError(null)
+    sendStream(
+      `Generate a marketing copy kit for this business: ${description}\n\nTone of voice: ${tone}.`,
+    )
+  }
+
+  const generate =
+    mode === 'json'
+      ? generateJson
+      : generateStreaming
+
   return (
     <div>
       <p className="demo-muted mb-4 max-w-2xl">
@@ -72,6 +207,28 @@ export default function CopyKitPanel() {
         as typed JSON — landing copy, social posts, an email sequence, and CTAs.
         This is a service you can deliver to clients in minutes.
       </p>
+
+      <div className="mb-4 flex gap-2">
+        {(
+          [
+            { id: 'streaming', label: 'Streaming', icon: Zap },
+            { id: 'json', label: 'One-shot JSON', icon: FileJson },
+          ] as const
+        ).map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setMode(id)}
+            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs transition ${
+              mode === id
+                ? 'bg-[var(--lagoon-deep)] font-semibold text-white'
+                : 'border border-[var(--line)] demo-muted hover:text-[var(--sea-ink)]'
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            {label}
+          </button>
+        ))}
+      </div>
 
       <div className="demo-card space-y-4 p-4">
         <textarea
@@ -138,83 +295,43 @@ export default function CopyKitPanel() {
         </div>
       )}
 
-      {kit && (
-        <div className="mt-6 space-y-4">
-          <div className="demo-card p-5">
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-xl font-bold text-[var(--sea-ink)]">
-                {kit.businessName}
-              </h3>
-              <CopyButton text={`${kit.tagline}\n\n${kit.heroHeadline}\n${kit.heroSubheadline}`} />
-            </div>
-            <p className="text-sm font-medium italic text-[var(--lagoon-deep)]">
-              “{kit.tagline}”
-            </p>
-            <hr className="my-4 border-[var(--line)]" />
-            <h4 className="text-lg font-semibold text-[var(--sea-ink)]">
-              {kit.heroHeadline}
-            </h4>
-            <p className="demo-muted mt-1 text-sm">{kit.heroSubheadline}</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {kit.ctaSuggestions.map((cta) => (
-                <span
-                  key={cta}
-                  className="rounded-full bg-[var(--lagoon-deep)] px-4 py-1.5 text-sm font-semibold text-white"
-                >
-                  {cta}
-                </span>
-              ))}
-            </div>
-          </div>
+      {mode === 'json' && kit && <div className="mt-6"><KitView kit={kit} /></div>}
 
-          <div className="grid gap-4 md:grid-cols-3">
-            {kit.socialPosts.map((post) => (
-              <div key={post.platform} className="demo-card p-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-[var(--lagoon-deep)]">
-                    {post.platform}
-                  </span>
-                  <CopyButton text={post.text} />
-                </div>
-                <p className="text-sm text-[var(--sea-ink)]">{post.text}</p>
-              </div>
-            ))}
+      {mode === 'streaming' &&
+        (partial && Object.keys(partial).length > 0 && !final ? (
+          <PartialView partial={partial as Partial<CopyKit>} />
+        ) : final ? (
+          <div className="mt-6">
+            <KitView kit={final as CopyKit} />
           </div>
+        ) : null)}
 
-          <div className="demo-card p-5">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--lagoon-deep)]">
-                Email campaign
-              </span>
-              <CopyButton text={`Subject: ${kit.emailSubject}\n\n${kit.emailBody}`} />
-            </div>
-            <p className="font-semibold text-[var(--sea-ink)]">
-              Subject: {kit.emailSubject}
-            </p>
-            <p className="demo-muted mt-2 whitespace-pre-line text-sm">
-              {kit.emailBody}
-            </p>
-          </div>
-        </div>
-      )}
-
-      <HowItWorks title="How this works: structured output">
+      <HowItWorks title="How this works: structured output, one-shot vs streaming">
         <ul className="list-disc space-y-2 pl-4">
           <li>
-            The server defines a Zod schema (<code>CopyKitSchema</code>) and passes it
-            as <code>outputSchema</code> to <code>chat()</code>.
+            Both modes pass the same Zod schema (<code>CopyKitSchema</code>, shared
+            between client and server in{' '}
+            <code>src/lib/studio-schemas.ts</code>) as{' '}
+            <code>outputSchema</code>.
           </li>
           <li>
-            TanStack AI converts the schema for each provider automatically — OpenAI
-            gets <code>response_format</code>, Anthropic uses tool-based extraction.
-            You never configure provider specifics.
+            <strong>One-shot:</strong>{' '}
+            <code>await chat({'{ outputSchema }'})</code> returns a fully typed,
+            server-validated object. Simple, but you wait for the whole thing.
           </li>
           <li>
-            The result arrives fully typed and server-side validated:{' '}
-            <code>result.heroHeadline</code> is a string, not a guess.
+            <strong>Streaming:</strong> add <code>stream: true</code> server-side and{' '}
+            <code>useChat({'{ outputSchema }'})</code> client-side — the hook's{' '}
+            <code>partial</code> fills field-by-field from JSON deltas and{' '}
+            <code>final</code> snaps to the completed object on the terminal{' '}
+            <code>structured-output.complete</code> event.
           </li>
           <li>
-            File: <code>src/routes/demo/api.ai.copykit.ts</code>
+            The adapter handles provider differences transparently — never configure
+            provider-specific response formats yourself.
+          </li>
+          <li>
+            Files: <code>src/routes/demo/api.ai.copykit.ts</code>, this panel
           </li>
         </ul>
       </HowItWorks>

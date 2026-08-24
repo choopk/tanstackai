@@ -84,3 +84,36 @@ export const scheduleIntroCall = scheduleIntroCallDef.server(
 export function getBookedCalls() {
   return [...bookedCalls]
 }
+
+// LAZY SERVER TOOL: `lazy: true` keeps its schema out of the initial
+// prompt. The model sees a synthetic __lazy__tool__discovery__ tool and
+// pulls the full schema only when it decides proof-of-results is relevant.
+export const getCaseStudiesToolDef = toolDefinition({
+  name: 'getCaseStudies',
+  description: 'Get real client case studies with measurable results',
+  inputSchema: z.object({}),
+  outputSchema: z.array(
+    z.object({
+      client: z.string(),
+      result: z.string(),
+    }),
+  ),
+  lazy: true,
+})
+
+const CASE_STUDIES = [
+  {
+    client: 'Riverside Dental (5 staff)',
+    result: 'Cut appointment no-shows 40% with AI reminders + voice booking',
+  },
+  {
+    client: 'Lone Star Bakery',
+    result: 'Weekly content calendar generated in 20 minutes instead of 2 days',
+  },
+  {
+    client: 'Meridian Realty',
+    result: 'Lead response time dropped from 6 hours to under 2 minutes',
+  },
+]
+
+export const getCaseStudies = getCaseStudiesToolDef.server(() => CASE_STUDIES)

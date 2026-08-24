@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import {
   chat,
-  chatParamsFromRequest,
+  chatParamsFromRequestBody,
   maxIterations,
   toServerSentEventsResponse,
 } from '@tanstack/ai'
@@ -17,6 +17,7 @@ import {
 } from '@tanstack/ai-persistence'
 
 import {
+  getCaseStudies,
   getServices,
   scheduleIntroCall,
   showOfferToolDef,
@@ -35,6 +36,9 @@ When discussing services or recommending an offering:
 1. FIRST: Use the getServices tool (no parameters needed) to see available packages
 2. SECOND: Use the showOffer tool with the package ID and a one-sentence pitch tailored to the client's situation
 3. NEVER write out package details yourself - ALWAYS use the showOffer tool
+
+When the user wants proof, past results, or references:
+1. Use the getCaseStudies tool to fetch real client outcomes before answering
 
 When the user wants to move forward, explore working together, or book a meeting:
 1. Propose a concrete time slot and topic, then call scheduleIntroCall to book it
@@ -72,25 +76,39 @@ export const Route = createFileRoute('/demo/api/ai/chat')({
         const abortController = new AbortController()
 
         try {
-          // Parses messages + threadId + runId + resume batch from the body
-          const params = await chatParamsFromRequest(request)
+          // Raw body first: we read custom fields (provider/debug) that are
+          // not part of the AG-UI RunAgentInput contract, then validate the
+          // rest through the body-level parser.
+          const raw = await request.json()
+          // Parses messages + threadId + runId + resume batch
+          const params = await chatParamsFromRequestBody(raw)
 
-          // Determine the best available provider
-          let provider: string = 'ollama'
-          let model: string = 'mistral:7b'
-          if (process.env.OPENROUTER_API_KEY) {
-            provider = 'openrouter'
-            model = 'openrouter/free'
-          } else if (process.env.ANTHROPIC_API_KEY) {
-            provider = 'anthropic'
-            model = 'claude-haiku-4-5'
-          } else if (process.env.OPENAI_API_KEY) {
-            provider = 'openai'
-            model = 'gpt-4o'
-          } else if (process.env.GEMINI_API_KEY) {
-            provider = 'gemini'
-            model = 'gemini-2.0-flash-exp'
+          // Providers actually usable in this environment (key present)
+          const availableProviders = [
+            ...(process.env.OPENROUTER_API_KEY ? ['openrouter'] : []),
+            ...(process.env.ANTHROPIC_API_KEY ? ['anthropic'] : []),
+            ...(process.env.OPENAI_API_KEY ? ['openai'] : []),
+            ...(process.env.GEMINI_API_KEY ? ['gemini'] : []),
+            'ollama',
+          ]
+
+          // Client may request a provider (runtime adapter switching);
+          // fall back to the best available one if it is not configured.
+          const requested =
+            typeof raw.provider === 'string' &&
+            availableProviders.includes(raw.provider)
+              ? raw.provider
+              : null
+          let provider: string = requested ?? availableProviders[0]
+          const MODELS = {
+            openrouter: 'openrouter/free',
+            anthropic: 'claude-haiku-4-5',
+            openai: 'gpt-4o',
+            gemini: 'gemini-2.0-flash-exp',
+            ollama: 'mistral:7b',
           }
+          let model: string =
+            MODELS[provider as keyof typeof MODELS] ?? MODELS.ollama
 
           // Adapter factory pattern for multi-vendor support
           const adapterConfig = {
@@ -116,6 +134,7 @@ export const Route = createFileRoute('/demo/api/ai/chat')({
               getServices, // Server tool - executes on the server
               showOfferToolDef, // Client tool - definition only, browser executes it
               scheduleIntroCall, // Approval-gated server tool - pauses for user approval
+              getCaseStudies, // Lazy server tool - schema discovered on demand
             ],
             systemPrompts: [SYSTEM_PROMPT],
             agentLoopStrategy: maxIterations(5),
@@ -123,6 +142,9 @@ export const Route = createFileRoute('/demo/api/ai/chat')({
             threadId: params.threadId,
             runId: params.runId,
             ...(params.resume ? { resume: params.resume } : {}),
+            // Toggleable from the client for live request/chunk tracing.
+            // Errors log by default even without this flag.
+            ...(raw.debug === true ? { debug: true } : {}),
             middleware: [
               studioUsageMiddleware, // per-thread token/tool metering
               withPersistence(persistence), // server-side transcripts, runs, interrupts
