@@ -49,3 +49,38 @@ export const showOfferToolDef = toolDefinition({
     displayed: z.boolean(),
   }),
 })
+
+// APPROVAL-GATED SERVER TOOL: needsApproval pauses execution until the
+// user approves it in the UI. The server only runs it after approval.
+export const scheduleIntroCallDef = toolDefinition({
+  name: 'scheduleIntroCall',
+  description:
+    'Schedule a free 30-minute discovery call with the studio. Requires explicit user approval before the calendar entry is created.',
+  inputSchema: z.object({
+    topic: z
+      .string()
+      .describe('What the discovery call will cover (the automation goal)'),
+    preferredTime: z
+      .string()
+      .describe('The proposed time slot, e.g. "Tuesday 2pm"'),
+  }),
+  outputSchema: z.object({
+    confirmed: z.boolean(),
+    slot: z.string(),
+  }),
+  needsApproval: true,
+})
+
+const bookedCalls: Array<{ topic: string; slot: string; bookedAt: number }> = []
+
+export const scheduleIntroCall = scheduleIntroCallDef.server(
+  async ({ topic, preferredTime }) => {
+    // In production this would write to Google Calendar / Cal.com etc.
+    bookedCalls.push({ topic, slot: preferredTime, bookedAt: Date.now() })
+    return { confirmed: true, slot: preferredTime }
+  },
+)
+
+export function getBookedCalls() {
+  return [...bookedCalls]
+}

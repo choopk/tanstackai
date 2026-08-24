@@ -8,12 +8,19 @@ import {
   ImageIcon,
   Mic,
   ArrowRight,
+  ShieldCheck,
+  HardDrive,
+  Gauge,
+  Globe,
 } from 'lucide-react'
 
 import CopyKitPanel from '#/components/studio/CopyKitPanel'
 import AgentPanel from '#/components/studio/AgentPanel'
 import ImagePanel from '#/components/studio/ImagePanel'
 import VoicePanel from '#/components/studio/VoicePanel'
+import MemoryPanel from '#/components/studio/MemoryPanel'
+import UsagePanel from '#/components/studio/UsagePanel'
+import McpPanel from '#/components/studio/McpPanel'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -21,6 +28,10 @@ const TABS = [
   { id: 'chat', label: 'Advisor Chat' },
   { id: 'data', label: 'Data Agent' },
   { id: 'actions', label: 'Action Agent' },
+  { id: 'approvals', label: 'Approvals' },
+  { id: 'memory', label: 'Memory' },
+  { id: 'usage', label: 'Usage Metering' },
+  { id: 'mcp', label: 'MCP Tools' },
   { id: 'ads', label: 'Ad Studio' },
   { id: 'voice', label: 'Voice Desk' },
 ] as const
@@ -28,7 +39,19 @@ const TABS = [
 export const Route = createFileRoute('/studio')({
   validateSearch: z.object({
     tab: z
-      .enum(['overview', 'copy', 'chat', 'data', 'actions', 'ads', 'voice'])
+      .enum([
+        'overview',
+        'copy',
+        'chat',
+        'data',
+        'actions',
+        'approvals',
+        'memory',
+        'usage',
+        'mcp',
+        'ads',
+        'voice',
+      ])
       .default('overview')
       .catch('overview'),
   }),
@@ -71,6 +94,42 @@ const MODULES = [
     description:
       'The LLM triggers showOffer in the browser to render an interactive offer card inside chat.',
     sell: 'Conversational checkout flows',
+  },
+  {
+    tab: 'approvals' as const,
+    icon: ShieldCheck,
+    feature: 'Tool Approval',
+    title: 'Approval-Gated Agent',
+    description:
+      'scheduleIntroCall has needsApproval: true — the run pauses until a human approves. Nothing executes unchecked.',
+    sell: 'Human-in-the-loop = deployable agents',
+  },
+  {
+    tab: 'memory' as const,
+    icon: HardDrive,
+    feature: 'Persistence',
+    title: 'Conversation Memory',
+    description:
+      'localStorage on the client, withPersistence + reconstructChat on the server. Reload-proof history and approvals.',
+    sell: 'The line between demo and SaaS',
+  },
+  {
+    tab: 'usage' as const,
+    icon: Gauge,
+    feature: 'Middleware',
+    title: 'Usage Metering',
+    description:
+      'onStart / onAfterToolCall / onUsage hooks meter every thread — requests, tool calls, tokens.',
+    sell: 'Usage-based billing infrastructure',
+  },
+  {
+    tab: 'mcp' as const,
+    icon: Globe,
+    feature: 'MCP Integration',
+    title: 'MCP Tool Discovery',
+    description:
+      'chat() discovers tools from the public DeepWiki MCP server at run start — zero hand-written integrations.',
+    sell: 'Instant "works with your stack" offers',
   },
   {
     tab: 'ads' as const,
@@ -162,9 +221,13 @@ function StudioPage() {
       <div className="min-h-[480px]">
         {tab === 'overview' && <OverviewTab />}
         {tab === 'copy' && <CopyKitPanel />}
-        {(tab === 'chat' || tab === 'data' || tab === 'actions') && (
-          <AgentPanel key={tab} focus={tab} />
-        )}
+        {(tab === 'chat' ||
+          tab === 'data' ||
+          tab === 'actions' ||
+          tab === 'approvals') && <AgentPanel key={tab} focus={tab} />}
+        {tab === 'memory' && <MemoryPanel />}
+        {tab === 'usage' && <UsagePanel />}
+        {tab === 'mcp' && <McpPanel />}
         {tab === 'ads' && <ImagePanel />}
         {tab === 'voice' && <VoicePanel />}
       </div>

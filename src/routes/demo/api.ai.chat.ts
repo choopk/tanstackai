@@ -1,12 +1,31 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { chat, maxIterations, toServerSentEventsResponse } from '@tanstack/ai'
+import {
+  chat,
+  chatParamsFromRequest,
+  maxIterations,
+  toServerSentEventsResponse,
+} from '@tanstack/ai'
 import { anthropicText } from '@tanstack/ai-anthropic'
 import { openaiText } from '@tanstack/ai-openai'
 import { geminiText } from '@tanstack/ai-gemini'
 import { ollamaText } from '@tanstack/ai-ollama'
 import { openRouterText } from '@tanstack/ai-openrouter'
+import {
+  memoryPersistence,
+  reconstructChat,
+  withPersistence,
+} from '@tanstack/ai-persistence'
 
-import { getServices, showOfferToolDef } from '#/lib/studio-tools'
+import {
+  getServices,
+  scheduleIntroCall,
+  showOfferToolDef,
+} from '#/lib/studio-tools'
+import { studioUsageMiddleware } from '#/lib/studio-usage'
+
+// In-process persistence backend (dev/tests). Swap for a database-backed
+// adapter (see @tanstack/ai-persistence store contracts) in production.
+const persistence = memoryPersistence()
 
 const SYSTEM_PROMPT = `You are an AI solutions consultant who helps small business owners find the right AI automation for their business.
 
@@ -16,6 +35,10 @@ When discussing services or recommending an offering:
 1. FIRST: Use the getServices tool (no parameters needed) to see available packages
 2. SECOND: Use the showOffer tool with the package ID and a one-sentence pitch tailored to the client's situation
 3. NEVER write out package details yourself - ALWAYS use the showOffer tool
+
+When the user wants to move forward, explore working together, or book a meeting:
+1. Propose a concrete time slot and topic, then call scheduleIntroCall to book it
+2. The scheduleIntroCall tool requires explicit human approval - it will pause until the user approves
 
 IMPORTANT:
 - The showOffer tool displays the package as an interactive card with a booking button
@@ -28,6 +51,15 @@ IMPORTANT:
 export const Route = createFileRoute('/demo/api/ai/chat')({
   server: {
     handlers: {
+      // Hydration endpoint for server-authoritative clients: resolves
+      // ?threadId= and returns stored transcript + pending interrupts.
+      GET: async ({ request }) => {
+        return reconstructChat(persistence, request, {
+          // Demo only. In production you MUST authorize by session here -
+          // without it anyone who guesses ?threadId= reads the thread.
+          authorize: async () => true,
+        })
+      },
       POST: async ({ request }) => {
         // Capture request signal before reading body (it may be aborted after body is consumed)
         const requestSignal = request.signal
@@ -40,8 +72,8 @@ export const Route = createFileRoute('/demo/api/ai/chat')({
         const abortController = new AbortController()
 
         try {
-          const body = await request.json()
-          const { messages } = body
+          // Parses messages + threadId + runId + resume batch from the body
+          const params = await chatParamsFromRequest(request)
 
           // Determine the best available provider
           let provider: string = 'ollama'
@@ -71,7 +103,8 @@ export const Route = createFileRoute('/demo/api/ai/chat')({
             ollama: () => ollamaText((model || 'mistral:7b') as any),
           }
 
-          const adapter = adapterConfig[provider]()
+          const adapter =
+            adapterConfig[provider as keyof typeof adapterConfig]()
 
           const stream = chat({
             adapter,
@@ -82,15 +115,24 @@ export const Route = createFileRoute('/demo/api/ai/chat')({
             tools: [
               getServices, // Server tool - executes on the server
               showOfferToolDef, // Client tool - definition only, browser executes it
+              scheduleIntroCall, // Approval-gated server tool - pauses for user approval
             ],
             systemPrompts: [SYSTEM_PROMPT],
             agentLoopStrategy: maxIterations(5),
-            messages,
+            messages: params.messages,
+            threadId: params.threadId,
+            runId: params.runId,
+            ...(params.resume ? { resume: params.resume } : {}),
+            middleware: [
+              studioUsageMiddleware, // per-thread token/tool metering
+              withPersistence(persistence), // server-side transcripts, runs, interrupts
+            ],
             abortController,
           })
 
           return toServerSentEventsResponse(stream, { abortController })
         } catch (error: any) {
+          console.error('[chat] request failed:', error)
           // If request was aborted, return early (don't send error response)
           if (error.name === 'AbortError' || abortController.signal.aborted) {
             return new Response(null, { status: 499 }) // 499 = Client Closed Request

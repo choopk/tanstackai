@@ -39,6 +39,16 @@ const FOCUS = {
       'Offer me a package for document processing',
     ],
   },
+  approvals: {
+    title: 'Approval-Gated Agent',
+    blurb:
+      'Ask to book a discovery call. The model will call scheduleIntroCall — which has needsApproval: true — and the run PAUSES until you approve or deny it below. Nothing executes without a human click.',
+    suggestions: [
+      'Can we set up a discovery call Tuesday at 2pm about automating my invoices?',
+      'I want to move forward - book me a call to discuss the voice receptionist',
+      "Schedule a call for next Monday morning to talk about my salon's missed calls",
+    ],
+  },
 } as const
 
 export default function AgentPanel({
@@ -48,7 +58,8 @@ export default function AgentPanel({
 }) {
   const { blurb, suggestions } = FOCUS[focus]
   const [input, setInput] = useState('')
-  const { messages, sendMessage, isLoading, stop } = useStudioChat()
+  const { messages, sendMessage, isLoading, stop, interrupts } =
+    useStudioChat()
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -67,6 +78,51 @@ export default function AgentPanel({
   return (
     <div>
       <p className="demo-muted mb-4 max-w-2xl">{blurb}</p>
+
+      {interrupts.length > 0 && (
+        <div className="mb-4 space-y-3">
+          {interrupts.map((interrupt) =>
+            interrupt.kind === 'tool-approval' ? (
+              <div
+                key={interrupt.toolCallId}
+                className="demo-card border-2 border-[var(--lagoon-deep)] p-4"
+              >
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="rounded-full bg-[var(--lagoon-deep)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                    Approval required
+                  </span>
+                  <code className="text-xs font-semibold text-[var(--sea-ink)]">
+                    {interrupt.toolName}
+                  </code>
+                </div>
+                <pre className="demo-muted mb-3 overflow-x-auto rounded-lg bg-[var(--chip-bg)] p-3 text-xs">
+                  {JSON.stringify(interrupt.originalArgs, null, 2)}
+                </pre>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => interrupt.resolveInterrupt(true)}
+                    className="demo-button px-4 py-1.5 text-sm"
+                  >
+                    Approve &amp; Execute
+                  </button>
+                  <button
+                    onClick={() => interrupt.resolveInterrupt(false)}
+                    className="demo-button demo-button-danger px-4 py-1.5 text-sm"
+                  >
+                    Deny
+                  </button>
+                  <button
+                    onClick={() => interrupt.cancel()}
+                    className="px-3 py-1.5 text-sm demo-muted transition hover:text-[var(--sea-ink)]"
+                  >
+                    Cancel run
+                  </button>
+                </div>
+              </div>
+            ) : null,
+          )}
+        </div>
+      )}
 
       <div className="demo-card flex flex-col p-0" style={{ height: '480px' }}>
         <div
@@ -203,7 +259,9 @@ export default function AgentPanel({
             ? 'How this works: streaming chat'
             : focus === 'data'
               ? 'How this works: server-side tools'
-              : 'How this works: client-side tools'
+              : focus === 'actions'
+                ? 'How this works: client-side tools'
+                : 'How this works: tool approval (human-in-the-loop)'
         }
       >
         {focus === 'chat' && (
@@ -255,6 +313,30 @@ export default function AgentPanel({
             <li>
               Meanwhile the UI renders an <code>&lt;OfferCard /&gt;</code> whenever a{' '}
               <code>tool-call</code> part named <code>showOffer</code> appears.
+            </li>
+          </ul>
+        )}
+        {focus === 'approvals' && (
+          <ul className="list-disc space-y-2 pl-4">
+            <li>
+              <code>scheduleIntroCallDef</code> sets <code>needsApproval: true</code>{' '}
+              and a server implementation that writes to a (fake) calendar.
+            </li>
+            <li>
+              When the model calls it, the run pauses at an interrupt boundary
+              with <code>RUN_FINISHED.outcome = interrupt</code>;{' '}
+              <code>useChat</code> surfaces it in the <code>interrupts</code> array.
+            </li>
+            <li>
+              Approve/Deny calls <code>interrupt.resolveInterrupt(...)</code>; the
+              client sends the resume batch and the endpoint forwards it via{' '}
+              <code>chatParamsFromRequest()</code> →{' '}
+              <code>chat({'{ resume }'})</code>.
+            </li>
+            <li>
+              Pending approvals survive reloads when persistence is wired — the
+              approval UI repaints on mount. Files:{' '}
+              <code>studio-tools.ts</code>, <code>api.ai.chat.ts</code>
             </li>
           </ul>
         )}

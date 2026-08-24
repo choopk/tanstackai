@@ -20,9 +20,11 @@ import { Route as DemoRouterSnippetIdRouteImport } from './routes/demo/router/$s
 import { Route as DemoApiAiChatRouteImport } from './routes/demo/api.ai.chat'
 import { Route as DemoApiAiCopykitRouteImport } from './routes/demo/api.ai.copykit'
 import { Route as DemoApiAiImageRouteImport } from './routes/demo/api.ai.image'
+import { Route as DemoApiAiMcpChatRouteImport } from './routes/demo/api.ai.mcp-chat'
 import { Route as DemoApiAiStructuredRouteImport } from './routes/demo/api.ai.structured'
 import { Route as DemoApiAiTranscriptionRouteImport } from './routes/demo/api.ai.transcription'
 import { Route as DemoApiAiTtsRouteImport } from './routes/demo/api.ai.tts'
+import { Route as DemoApiAiUsageRouteImport } from './routes/demo/api.ai.usage'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -79,6 +81,11 @@ const DemoApiAiImageRoute = DemoApiAiImageRouteImport.update({
   path: '/demo/api/ai/image',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoApiAiMcpChatRoute = DemoApiAiMcpChatRouteImport.update({
+  id: '/demo/api/ai/mcp-chat',
+  path: '/demo/api/ai/mcp-chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoApiAiStructuredRoute = DemoApiAiStructuredRouteImport.update({
   id: '/demo/api/ai/structured',
   path: '/demo/api/ai/structured',
@@ -94,6 +101,11 @@ const DemoApiAiTtsRoute = DemoApiAiTtsRouteImport.update({
   path: '/demo/api/ai/tts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoApiAiUsageRoute = DemoApiAiUsageRouteImport.update({
+  id: '/demo/api/ai/usage',
+  path: '/demo/api/ai/usage',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -107,9 +119,11 @@ export interface FileRoutesByFullPath {
   '/demo/api/ai/chat': typeof DemoApiAiChatRoute
   '/demo/api/ai/copykit': typeof DemoApiAiCopykitRoute
   '/demo/api/ai/image': typeof DemoApiAiImageRoute
+  '/demo/api/ai/mcp-chat': typeof DemoApiAiMcpChatRoute
   '/demo/api/ai/structured': typeof DemoApiAiStructuredRoute
   '/demo/api/ai/transcription': typeof DemoApiAiTranscriptionRoute
   '/demo/api/ai/tts': typeof DemoApiAiTtsRoute
+  '/demo/api/ai/usage': typeof DemoApiAiUsageRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -123,9 +137,11 @@ export interface FileRoutesByTo {
   '/demo/api/ai/chat': typeof DemoApiAiChatRoute
   '/demo/api/ai/copykit': typeof DemoApiAiCopykitRoute
   '/demo/api/ai/image': typeof DemoApiAiImageRoute
+  '/demo/api/ai/mcp-chat': typeof DemoApiAiMcpChatRoute
   '/demo/api/ai/structured': typeof DemoApiAiStructuredRoute
   '/demo/api/ai/transcription': typeof DemoApiAiTranscriptionRoute
   '/demo/api/ai/tts': typeof DemoApiAiTtsRoute
+  '/demo/api/ai/usage': typeof DemoApiAiUsageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -140,9 +156,11 @@ export interface FileRoutesById {
   '/demo/api/ai/chat': typeof DemoApiAiChatRoute
   '/demo/api/ai/copykit': typeof DemoApiAiCopykitRoute
   '/demo/api/ai/image': typeof DemoApiAiImageRoute
+  '/demo/api/ai/mcp-chat': typeof DemoApiAiMcpChatRoute
   '/demo/api/ai/structured': typeof DemoApiAiStructuredRoute
   '/demo/api/ai/transcription': typeof DemoApiAiTranscriptionRoute
   '/demo/api/ai/tts': typeof DemoApiAiTtsRoute
+  '/demo/api/ai/usage': typeof DemoApiAiUsageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -158,9 +176,11 @@ export interface FileRouteTypes {
     | '/demo/api/ai/chat'
     | '/demo/api/ai/copykit'
     | '/demo/api/ai/image'
+    | '/demo/api/ai/mcp-chat'
     | '/demo/api/ai/structured'
     | '/demo/api/ai/transcription'
     | '/demo/api/ai/tts'
+    | '/demo/api/ai/usage'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -174,9 +194,11 @@ export interface FileRouteTypes {
     | '/demo/api/ai/chat'
     | '/demo/api/ai/copykit'
     | '/demo/api/ai/image'
+    | '/demo/api/ai/mcp-chat'
     | '/demo/api/ai/structured'
     | '/demo/api/ai/transcription'
     | '/demo/api/ai/tts'
+    | '/demo/api/ai/usage'
   id:
     | '__root__'
     | '/'
@@ -190,9 +212,11 @@ export interface FileRouteTypes {
     | '/demo/api/ai/chat'
     | '/demo/api/ai/copykit'
     | '/demo/api/ai/image'
+    | '/demo/api/ai/mcp-chat'
     | '/demo/api/ai/structured'
     | '/demo/api/ai/transcription'
     | '/demo/api/ai/tts'
+    | '/demo/api/ai/usage'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -207,9 +231,11 @@ export interface RootRouteChildren {
   DemoApiAiChatRoute: typeof DemoApiAiChatRoute
   DemoApiAiCopykitRoute: typeof DemoApiAiCopykitRoute
   DemoApiAiImageRoute: typeof DemoApiAiImageRoute
+  DemoApiAiMcpChatRoute: typeof DemoApiAiMcpChatRoute
   DemoApiAiStructuredRoute: typeof DemoApiAiStructuredRoute
   DemoApiAiTranscriptionRoute: typeof DemoApiAiTranscriptionRoute
   DemoApiAiTtsRoute: typeof DemoApiAiTtsRoute
+  DemoApiAiUsageRoute: typeof DemoApiAiUsageRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -291,6 +317,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoApiAiImageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo/api/ai/mcp-chat': {
+      id: '/demo/api/ai/mcp-chat'
+      path: '/demo/api/ai/mcp-chat'
+      fullPath: '/demo/api/ai/mcp-chat'
+      preLoaderRoute: typeof DemoApiAiMcpChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo/api/ai/structured': {
       id: '/demo/api/ai/structured'
       path: '/demo/api/ai/structured'
@@ -312,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoApiAiTtsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo/api/ai/usage': {
+      id: '/demo/api/ai/usage'
+      path: '/demo/api/ai/usage'
+      fullPath: '/demo/api/ai/usage'
+      preLoaderRoute: typeof DemoApiAiUsageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -327,9 +367,11 @@ const rootRouteChildren: RootRouteChildren = {
   DemoApiAiChatRoute: DemoApiAiChatRoute,
   DemoApiAiCopykitRoute: DemoApiAiCopykitRoute,
   DemoApiAiImageRoute: DemoApiAiImageRoute,
+  DemoApiAiMcpChatRoute: DemoApiAiMcpChatRoute,
   DemoApiAiStructuredRoute: DemoApiAiStructuredRoute,
   DemoApiAiTranscriptionRoute: DemoApiAiTranscriptionRoute,
   DemoApiAiTtsRoute: DemoApiAiTtsRoute,
+  DemoApiAiUsageRoute: DemoApiAiUsageRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

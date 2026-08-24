@@ -6,7 +6,7 @@ import {
 import type { InferChatMessages } from '@tanstack/ai-react'
 import { clientTools } from '@tanstack/ai-client'
 
-import { showOfferToolDef } from '#/lib/studio-tools'
+import { showOfferToolDef, scheduleIntroCallDef } from '#/lib/studio-tools'
 
 // Client-side tool implementation: runs in the browser when the model
 // emits a showOffer call. We normalize the id and confirm display.
@@ -17,7 +17,12 @@ const showOfferToolClient = showOfferToolDef.client(({ id }) => ({
 
 const chatOptions = createChatClientOptions({
   connection: fetchServerSentEvents('/demo/api/ai/chat'),
-  tools: clientTools(showOfferToolClient),
+  tools: clientTools(
+    showOfferToolClient,
+    // Bare definition: this tool executes on the server, but registering
+    // the definition here types its approval interrupts for the UI.
+    scheduleIntroCallDef,
+  ),
 })
 
 export type ChatMessages = InferChatMessages<typeof chatOptions>
