@@ -132,7 +132,7 @@ export default function UsagePanel() {
           </li>
           <li>
             It's attached in the endpoint's{' '}
-            <code>chat({'{ middleware: [studioUsageMiddleware] }'})</code> array —
+            <code>chat({'{ middleware: [...studioUsage] }'})</code> array —
             every client (advisor, memory, MCP chats) is metered automatically.
           </li>
           <li>

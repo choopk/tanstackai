@@ -1,15 +1,71 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Send, Square, X, Bug } from 'lucide-react'
+import { Send, Square, X, Bug, RadioTower } from 'lucide-react'
 import { Streamdown } from 'streamdown'
 
 import {
   createStudioChatOptions,
+  type ChatTransport,
   type StudioChatRuntimeOptions,
 } from '#/lib/demo-ai-hook'
 import { useChat } from '@tanstack/ai-react'
 import OfferCard from '#/components/demo-OfferCard'
 
 import HowItWorks from './HowItWorks'
+
+// Answer form for the discovery-intake GENERIC interrupt. The shape is
+// typed by the shared defineInterrupt() responseSchema registered in
+// createStudioChatOptions.
+function IntakeForm({
+  onSubmit,
+  onCancel,
+}: {
+  onSubmit: (answer: {
+    teamSize: '1-5' | '6-20' | '21-100' | '100+'
+    biggestTimeDrain: string
+  }) => void
+  onCancel: () => void
+}) {
+  const [teamSize, setTeamSize] = useState<'1-5' | '6-20' | '21-100' | '100+'>(
+    '1-5',
+  )
+  const [drain, setDrain] = useState('')
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <select
+        value={teamSize}
+        onChange={(e) => setTeamSize(e.target.value as typeof teamSize)}
+        className="rounded-lg border border-[var(--line)] bg-transparent px-2 py-1.5 text-xs text-[var(--sea-ink)]"
+      >
+        <option value="1-5">Team: 1–5</option>
+        <option value="6-20">Team: 6–20</option>
+        <option value="21-100">Team: 21–100</option>
+        <option value="100+">Team: 100+</option>
+      </select>
+      <input
+        value={drain}
+        onChange={(e) => setDrain(e.target.value)}
+        placeholder="Biggest time drain..."
+        className="demo-textarea min-h-0 flex-1 py-1.5 text-xs"
+        style={{ minHeight: '32px', maxHeight: '32px' }}
+      />
+      <div className="flex gap-2">
+        <button
+          onClick={() => onSubmit({ teamSize, biggestTimeDrain: drain })}
+          disabled={drain.trim().length < 3}
+          className="demo-button px-3 py-1.5 text-xs disabled:opacity-50"
+        >
+          Answer
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-3 py-1.5 text-xs demo-muted transition hover:text-[var(--sea-ink)]"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
 
 const FOCUS = {
   chat: {
@@ -74,16 +130,32 @@ export default function AgentPanel({
   const [input, setInput] = useState('')
   const [provider, setProvider] = useState('')
   const [debug, setDebug] = useState(false)
+  const [transport, setTransport] = useState<ChatTransport>('sse')
+  const [intake, setIntake] = useState(focus === 'approvals')
+
+  // Latest run correlation id (via onRunIdChange) — used for the
+  // out-of-band server cancel (requestRunCancel control plane).
+  const runIdRef = useRef<string | null>(null)
+  const handlersRef = useRef({
+    onRunIdChange: (runId: string | null) => {
+      runIdRef.current = runId
+    },
+  })
 
   // Runtime adapter switching + debug flag ride to the server via `body`.
   const runtime = useMemo<StudioChatRuntimeOptions>(
     () => ({
       ...(provider ? { provider } : {}),
       ...(debug ? { debug: true } : {}),
+      transport,
+      ...(intake ? { intake: true } : {}),
     }),
-    [provider, debug],
+    [provider, debug, transport, intake],
   )
-  const chatOptions = useMemo(() => createStudioChatOptions(runtime), [runtime])
+  const chatOptions = useMemo(
+    () => createStudioChatOptions(runtime, handlersRef.current),
+    [runtime],
+  )
 
   const {
     messages,
@@ -110,6 +182,23 @@ export default function AgentPanel({
     setInput('')
   }
 
+  // Graceful cancellation with a durable reason code: record intent on the
+  // SERVER first (requestRunCancel), then drop the connection locally.
+  const stopAndCancel = async () => {
+    const runId = runIdRef.current
+    stop()
+    if (!runId) return
+    try {
+      await fetch('/demo/api/ai/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ runId }),
+      })
+    } catch {
+      // Local stop already took effect; cancel endpoint is best-effort.
+    }
+  }
+
   return (
     <div>
       <p className="demo-muted mb-4 max-w-2xl">{blurb}</p>
@@ -130,6 +219,27 @@ export default function AgentPanel({
             ))}
           </select>
         </label>
+        <label className="flex items-center gap-2 text-xs demo-muted">
+          Transport
+          <select
+            value={transport}
+            onChange={(e) => setTransport(e.target.value as ChatTransport)}
+            className="rounded-lg border border-[var(--line)] bg-transparent px-2 py-1 text-xs text-[var(--sea-ink)]"
+          >
+            <option value="sse">SSE (HTTP stream)</option>
+            <option value="ws">WebSocket (full-duplex)</option>
+          </select>
+        </label>
+        <label className="flex cursor-pointer items-center gap-2 text-xs demo-muted">
+          <input
+            type="checkbox"
+            checked={intake}
+            onChange={(e) => setIntake(e.target.checked)}
+            className="accent-[var(--lagoon-deep)]"
+          />
+          <RadioTower className="h-3.5 w-3.5" />
+          Discovery intake interrupt
+        </label>
         <label className="ml-auto flex cursor-pointer items-center gap-2 text-xs demo-muted">
           <input
             type="checkbox"
@@ -141,6 +251,31 @@ export default function AgentPanel({
           Debug logging (server console)
         </label>
       </div>
+
+      {interrupts.map((interrupt) =>
+        interrupt.kind === 'generic' &&
+        'definitionId' in interrupt &&
+        interrupt.definitionId === 'discovery-intake' ? (
+          <div
+            key={interrupt.binding.key}
+            className="demo-card border-2 border-[var(--lagoon-deep)] p-4"
+          >
+            <div className="mb-2 flex items-center gap-2">
+              <span className="rounded-full bg-[var(--sea-ink-soft)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                Generic interrupt
+              </span>
+              <code className="text-xs font-semibold text-[var(--sea-ink)]">
+                discovery-intake#{interrupt.binding.key}
+              </code>
+            </div>
+            <p className="demo-muted mb-3 text-sm">{interrupt.payload?.topic}</p>
+            <IntakeForm
+              onSubmit={(answer) => interrupt.resolveInterrupt(answer)}
+              onCancel={() => interrupt.cancel()}
+            />
+          </div>
+        ) : null,
+      )}
 
       {interrupts.length > 0 && (
         <div className="mb-4 space-y-3">
@@ -333,9 +468,9 @@ export default function AgentPanel({
             {isLoading ? (
               <button
                 type="button"
-                onClick={stop}
+                onClick={stopAndCancel}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-red-500"
-                title="Stop"
+                title="Stop (also records a durable server-side cancel)"
               >
                 <Square className="h-4 w-4 fill-current" />
               </button>
@@ -368,16 +503,19 @@ export default function AgentPanel({
             <li>
               Server: <code>chat({'{ adapter, systemPrompts, agentLoopStrategy }'})</code>{' '}
               streams AG-UI events;{' '}
-              <code>toServerSentEventsResponse()</code> turns them into SSE.
+              <code>toServerSentEventsResponse()</code> turns them into SSE — or{' '}
+              <code>toWebSocketStream()</code> over the full-duplex{' '}
+              <code>WebSocket</code> transport (switch above).
             </li>
             <li>
-              Client: <code>useChat()</code> + <code>fetchServerSentEvents()</code> parse
-              the stream into typed message parts automatically.
+              The agent loop is governed by composed strategies:{' '}
+              <code>combineStrategies([maxIterations(8), untilFinishReason(['stop','length'])])</code>{' '}
+              — AND logic that stops the run at the first complete answer.
             </li>
             <li>
-              The consultant persona comes entirely from{' '}
-              <code>systemPrompts</code> in{' '}
-              <code>src/routes/demo/api.ai.chat.ts</code>.
+              Client: <code>useChat()</code> + <code>fetchServerSentEvents()</code> or{' '}
+              <code>webSocket()</code> parse the stream into typed message parts
+              automatically.
             </li>
           </ul>
         )}
@@ -421,24 +559,33 @@ export default function AgentPanel({
         {focus === 'approvals' && (
           <ul className="list-disc space-y-2 pl-4">
             <li>
+              <strong>Tool approval:</strong>{' '}
               <code>scheduleIntroCallDef</code> sets <code>needsApproval: true</code>{' '}
               and a server implementation that writes to a (fake) calendar.
+              When the model calls it, the run pauses at an interrupt boundary
+              with <code>RUN_FINISHED.outcome = interrupt</code>.
             </li>
             <li>
-              When the model calls it, the run pauses at an interrupt boundary
-              with <code>RUN_FINISHED.outcome = interrupt</code>;{' '}
-              <code>useChat</code> surfaces it in the <code>interrupts</code> array.
+              <strong>Generic interrupts:</strong> with "Discovery intake" checked,
+              a middleware raises a <code>defineInterrupt()</code>-typed question at the{' '}
+              <code>beforeTools</code> boundary (payload/response Zod schemas shared by
+              server and client). Answering it resumes the batch; cancelling returns{' '}
+              <code>toolResume: 'stop'</code>.
             </li>
             <li>
               Approve/Deny calls <code>interrupt.resolveInterrupt(...)</code>; the
               client sends the resume batch and the endpoint forwards it via{' '}
               <code>chatParamsFromRequest()</code> →{' '}
-              <code>chat({'{ resume }'})</code>.
+              <code>chat({'{ resume }'})</code>. Pending approvals survive reloads.
             </li>
             <li>
-              Pending approvals survive reloads when persistence is wired — the
-              approval UI repaints on mount. Files:{' '}
-              <code>studio-tools.ts</code>, <code>api.ai.chat.ts</code>
+              <strong>Durable cancel:</strong> the stop button first POSTs to{' '}
+              <code>/demo/api/ai/cancel</code>, which records an explicit cancel via{' '}
+              <code>requestRunCancel</code>; middleware reads it back with{' '}
+              <code>AbortInfo.cancelRequested</code> / <code>wasCancelRequested</code>{' '}
+              to distinguish "user stopped it" from "viewer left". Files:{' '}
+              <code>studio-intake.ts</code>, <code>studio-ws-server.ts</code>,{' '}
+              <code>api.ai.cancel.ts</code>
             </li>
           </ul>
         )}

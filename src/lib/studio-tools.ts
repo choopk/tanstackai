@@ -1,7 +1,10 @@
 import { toolDefinition } from '@tanstack/ai'
 import { z } from 'zod'
 
-import services from '#/data/studio-services'
+// Relative import (not the `#/` alias): this module is also pulled into the
+// Vite config bundle for the WebSocket upgrade handler, where tsconfig paths
+// are not applied.
+import services from '../data/studio-services'
 
 // SERVER TOOL: the model calls this, the server executes it and feeds
 // the result back into the conversation. The client never runs this code.

@@ -17,6 +17,7 @@ import { Route as DemoAiImageRouteImport } from './routes/demo/ai-image'
 import { Route as DemoAiStructuredRouteImport } from './routes/demo/ai-structured'
 import { Route as DemoStoreRouteImport } from './routes/demo/store'
 import { Route as DemoRouterSnippetIdRouteImport } from './routes/demo/router/$snippetId'
+import { Route as DemoApiAiCancelRouteImport } from './routes/demo/api.ai.cancel'
 import { Route as DemoApiAiChatRouteImport } from './routes/demo/api.ai.chat'
 import { Route as DemoApiAiCopykitRouteImport } from './routes/demo/api.ai.copykit'
 import { Route as DemoApiAiImageRouteImport } from './routes/demo/api.ai.image'
@@ -64,6 +65,11 @@ const DemoStoreRoute = DemoStoreRouteImport.update({
 const DemoRouterSnippetIdRoute = DemoRouterSnippetIdRouteImport.update({
   id: '/demo/router/$snippetId',
   path: '/demo/router/$snippetId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoApiAiCancelRoute = DemoApiAiCancelRouteImport.update({
+  id: '/demo/api/ai/cancel',
+  path: '/demo/api/ai/cancel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoApiAiChatRoute = DemoApiAiChatRouteImport.update({
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/demo/ai-structured': typeof DemoAiStructuredRoute
   '/demo/store': typeof DemoStoreRoute
   '/demo/router/$snippetId': typeof DemoRouterSnippetIdRoute
+  '/demo/api/ai/cancel': typeof DemoApiAiCancelRoute
   '/demo/api/ai/chat': typeof DemoApiAiChatRoute
   '/demo/api/ai/copykit': typeof DemoApiAiCopykitRoute
   '/demo/api/ai/image': typeof DemoApiAiImageRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/demo/ai-structured': typeof DemoAiStructuredRoute
   '/demo/store': typeof DemoStoreRoute
   '/demo/router/$snippetId': typeof DemoRouterSnippetIdRoute
+  '/demo/api/ai/cancel': typeof DemoApiAiCancelRoute
   '/demo/api/ai/chat': typeof DemoApiAiChatRoute
   '/demo/api/ai/copykit': typeof DemoApiAiCopykitRoute
   '/demo/api/ai/image': typeof DemoApiAiImageRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/demo/ai-structured': typeof DemoAiStructuredRoute
   '/demo/store': typeof DemoStoreRoute
   '/demo/router/$snippetId': typeof DemoRouterSnippetIdRoute
+  '/demo/api/ai/cancel': typeof DemoApiAiCancelRoute
   '/demo/api/ai/chat': typeof DemoApiAiChatRoute
   '/demo/api/ai/copykit': typeof DemoApiAiCopykitRoute
   '/demo/api/ai/image': typeof DemoApiAiImageRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/demo/ai-structured'
     | '/demo/store'
     | '/demo/router/$snippetId'
+    | '/demo/api/ai/cancel'
     | '/demo/api/ai/chat'
     | '/demo/api/ai/copykit'
     | '/demo/api/ai/image'
@@ -191,6 +201,7 @@ export interface FileRouteTypes {
     | '/demo/ai-structured'
     | '/demo/store'
     | '/demo/router/$snippetId'
+    | '/demo/api/ai/cancel'
     | '/demo/api/ai/chat'
     | '/demo/api/ai/copykit'
     | '/demo/api/ai/image'
@@ -209,6 +220,7 @@ export interface FileRouteTypes {
     | '/demo/ai-structured'
     | '/demo/store'
     | '/demo/router/$snippetId'
+    | '/demo/api/ai/cancel'
     | '/demo/api/ai/chat'
     | '/demo/api/ai/copykit'
     | '/demo/api/ai/image'
@@ -228,6 +240,7 @@ export interface RootRouteChildren {
   DemoAiStructuredRoute: typeof DemoAiStructuredRoute
   DemoStoreRoute: typeof DemoStoreRoute
   DemoRouterSnippetIdRoute: typeof DemoRouterSnippetIdRoute
+  DemoApiAiCancelRoute: typeof DemoApiAiCancelRoute
   DemoApiAiChatRoute: typeof DemoApiAiChatRoute
   DemoApiAiCopykitRoute: typeof DemoApiAiCopykitRoute
   DemoApiAiImageRoute: typeof DemoApiAiImageRoute
@@ -294,6 +307,13 @@ declare module '@tanstack/react-router' {
       path: '/demo/router/$snippetId'
       fullPath: '/demo/router/$snippetId'
       preLoaderRoute: typeof DemoRouterSnippetIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo/api/ai/cancel': {
+      id: '/demo/api/ai/cancel'
+      path: '/demo/api/ai/cancel'
+      fullPath: '/demo/api/ai/cancel'
+      preLoaderRoute: typeof DemoApiAiCancelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo/api/ai/chat': {
@@ -364,6 +384,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoAiStructuredRoute: DemoAiStructuredRoute,
   DemoStoreRoute: DemoStoreRoute,
   DemoRouterSnippetIdRoute: DemoRouterSnippetIdRoute,
+  DemoApiAiCancelRoute: DemoApiAiCancelRoute,
   DemoApiAiChatRoute: DemoApiAiChatRoute,
   DemoApiAiCopykitRoute: DemoApiAiCopykitRoute,
   DemoApiAiImageRoute: DemoApiAiImageRoute,

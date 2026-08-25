@@ -4,7 +4,7 @@ import { createMCPClient } from '@tanstack/ai-mcp'
 import { openaiText } from '@tanstack/ai-openai'
 import { openRouterText } from '@tanstack/ai-openrouter'
 
-import { studioUsageMiddleware } from '#/lib/studio-usage'
+import { studioUsage } from '#/lib/studio-usage'
 
 const FREE_MODEL = 'openrouter/free'
 
@@ -58,7 +58,7 @@ export const Route = createFileRoute('/demo/api/ai/mcp-chat')({
               // Skip a source that fails discovery instead of failing the run
               onDiscoveryError: () => {},
             },
-            middleware: [studioUsageMiddleware],
+            middleware: [...studioUsage],
           })
 
           return toServerSentEventsResponse(stream)

@@ -1,11 +1,13 @@
 import {
   fetchServerSentEvents,
   useChat,
+  webSocket,
   createChatClientOptions,
 } from '@tanstack/ai-react'
 import type { InferChatMessages } from '@tanstack/ai-react'
 import { clientTools } from '@tanstack/ai-client'
 
+import { discoveryIntake } from '#/lib/studio-intake'
 import { showOfferToolDef, scheduleIntroCallDef } from '#/lib/studio-tools'
 
 // Client-side tool implementation: runs in the browser when the model
@@ -15,30 +17,45 @@ const showOfferToolClient = showOfferToolDef.client(({ id }) => ({
   displayed: true,
 }))
 
+export type ChatTransport = 'sse' | 'ws'
+
 export interface StudioChatRuntimeOptions {
   // Runtime adapter switching: the endpoint falls back to the best
   // configured provider if the requested one has no API key.
   provider?: string
   // Turns on server-side debug logging (request/provider/output/tools...)
   debug?: boolean
+  // SSE vs full-duplex WebSocket transport ('/demo/api/ai/ws')
+  transport?: ChatTransport
+  // Opt-in generic interrupt demo: discovery intake before tools run.
+  intake?: boolean
 }
 
 export function createStudioChatOptions(
   runtime?: StudioChatRuntimeOptions,
+  handlers?: { onRunIdChange?: (runId: string | null) => void },
 ) {
   const body: Record<string, unknown> = {}
   if (runtime?.provider) body.provider = runtime.provider
   if (runtime?.debug) body.debug = true
+  if (runtime?.intake) body.intake = true
 
   return createChatClientOptions({
-    connection: fetchServerSentEvents('/demo/api/ai/chat'),
+    connection:
+      runtime?.transport === 'ws'
+        ? webSocket('/demo/api/ai/ws')
+        : fetchServerSentEvents('/demo/api/ai/chat'),
     tools: clientTools(
       showOfferToolClient,
       // Bare definition: this tool executes on the server, but registering
       // the definition here types its approval interrupts for the UI.
       scheduleIntroCallDef,
     ),
+    // Same generic interrupt definition registered on the server — one
+    // shared contract for payload/response on both sides of the wire.
+    interrupts: [discoveryIntake],
     ...(Object.keys(body).length > 0 ? { body } : {}),
+    ...(handlers?.onRunIdChange ? { onRunIdChange: handlers.onRunIdChange } : {}),
   })
 }
 
